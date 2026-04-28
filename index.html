@@ -209,10 +209,10 @@ input:focus,select:focus{outline:none;border-color:#0f2944}
 let P=JSON.parse(localStorage.getItem('bb_p')||'[]');
 let S=JSON.parse(localStorage.getItem('bb_s')||'[]');
 let V=JSON.parse(localStorage.getItem('bb_v')||'[]');
-let C=JSON.parse(localStorage.getItem('bb_c')||JSON.stringify({
-  supabaseUrl:'https://uqxqgacftmssyujdbvoh.supabase.co',
-  supabaseKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxeHFnYWNmdG1zc3l1amRidm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMTg5NjQsImV4cCI6MjA5Mjg5NDk2NH0._ik5YEXCViK0RMu5I9Jiml5blw3YMMlsbDn18v3vJfU'
-}));
+// Supabase設定（固定）
+const SUPABASE_URL='https://uqxqgacftmssyujdbvoh.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxeHFnYWNmdG1zc3l1amRidm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMTg5NjQsImV4cCI6MjA5Mjg5NDk2NH0._ik5YEXCViK0RMu5I9Jiml5blw3YMMlsbDn18v3vJfU';
+let C=Object.assign({supabaseUrl:SUPABASE_URL,supabaseKey:SUPABASE_KEY},JSON.parse(localStorage.getItem('bb_c')||'{}'));
 
 function sv(){
   localStorage.setItem('bb_p',JSON.stringify(P));
