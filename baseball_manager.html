@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>草野球マネージャー</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN',sans-serif;background:#f5f5f0;min-height:100vh}
+.app{max-width:480px;margin:0 auto;padding:0 0 70px}
+.hdr{background:#0f2944;color:#fff;padding:16px;text-align:center}
+.hdr h1{font-size:19px;font-weight:600;letter-spacing:.5px}
+.hdr p{font-size:12px;opacity:.65;margin-top:3px}
+.tabs{display:flex;background:#fff;border-bottom:1px solid #e5e5e0;position:sticky;top:0;z-index:10}
+.tab{flex:1;padding:12px 4px;font-size:12px;text-align:center;cursor:pointer;color:#888;border-bottom:2px solid transparent;transition:.15s}
+.tab.on{color:#0f2944;border-bottom-color:#0f2944;font-weight:600}
+.sec{display:none;padding:12px}.sec.on{display:block}
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.ctitle{font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+label{font-size:12px;color:#666;display:block;margin-bottom:3px;margin-top:8px}
+label:first-child{margin-top:0}
+input,select{width:100%;padding:9px 11px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fafafa;color:#222;-webkit-appearance:none}
+input:focus,select:focus{outline:none;border-color:#0f2944}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;padding:11px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:none;margin-top:10px;transition:opacity .15s}
+.btn:active{opacity:.75}
+.btn-b{background:#0f2944;color:#fff}
+.btn-g{background:#1a6b3c;color:#fff}
+.btn-a{background:#b8860b;color:#fff}
+.btn-o{background:#fff;border:1px solid #ddd;color:#333;margin-top:8px}
+.prow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0f0eb}
+.prow:last-child{border-bottom:none}
+.pname{font-size:14px;font-weight:600}.ppos{font-size:11px;color:#888;margin-top:1px}
+.chip{font-size:11px;padding:3px 9px;border-radius:10px;font-weight:600}
+.cg{background:#d4edda;color:#155724}
+.cb{background:#cce5ff;color:#004085}
+.cy{background:#fff3cd;color:#856404}
+.cr{background:#f8d7da;color:#721c24}
+.mcard{background:#f8f8f5;border-radius:9px;padding:10px;text-align:center}
+.mval{font-size:22px;font-weight:700;color:#0f2944}
+.mlbl{font-size:11px;color:#888;margin-top:2px}
+.li{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid #f0f0eb}
+.li:last-child{border-bottom:none}
+.lnum{width:28px;height:28px;border-radius:50%;background:#0f2944;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ai-box{background:#f0f7ff;border:1px solid #b8d4f0;border-radius:10px;padding:13px;margin-top:10px;white-space:pre-wrap;font-size:13px;line-height:1.7;max-height:320px;overflow-y:auto;color:#222}
+.ytcard{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0eb}
+.ytcard:last-child{border-bottom:none}
+.ytthumb{width:80px;height:52px;border-radius:7px;background:#e8e8e0;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:20px}
+.ytthumb img{width:100%;height:100%;object-fit:cover}
+.yttitle{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ytdate{font-size:11px;color:#888;margin:2px 0}
+.ytlink{font-size:12px;color:#1a5fa8;text-decoration:none}
+.msg{font-size:13px;padding:9px 12px;border-radius:8px;margin-top:8px}
+.ok{background:#d4edda;color:#155724}
+.er{background:#f8d7da;color:#721c24}
+.empty{text-align:center;color:#aaa;font-size:13px;padding:22px 0}
+.smini{font-size:11px;color:#888}
+.numball{width:22px;height:22px;border-radius:50%;background:#0f2944;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="hdr">
+  <h1>⚾ 草野球マネージャー</h1>
+  <p id="teamlbl">成績管理 · OPS算出 · AI打順提案</p>
+</div>
+<div class="tabs">
+  <div class="tab on" onclick="go('players',this)">👤 選手</div>
+  <div class="tab" onclick="go('stats',this)">📊 成績</div>
+  <div class="tab" onclick="go('lineup',this)">⚡ 打順</div>
+  <div class="tab" onclick="go('videos',this)">🎬 動画</div>
+  <div class="tab" onclick="go('cfg',this)">⚙️ 設定</div>
+</div>
+
+<!-- 選手 -->
+<div id="s-players" class="sec on">
+  <div class="card">
+    <div class="ctitle">選手登録</div>
+    <label>選手名</label><input id="pname" placeholder="山田 太郎">
+    <div class="g2">
+      <div>
+        <label>ポジション</label>
+        <select id="ppos">
+          <option>投手</option><option>捕手</option><option>一塁手</option><option>二塁手</option>
+          <option>三塁手</option><option>遊撃手</option><option>左翼手</option><option>中堅手</option><option>右翼手</option>
+        </select>
+      </div>
+      <div><label>背番号</label><input id="pnum" type="number" placeholder="1"></div>
+    </div>
+    <button class="btn btn-b" onclick="addPlayer()">＋ 選手を追加</button>
+    <div id="pmsg"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">選手一覧</div>
+    <div id="plist"><div class="empty">選手を登録してください</div></div>
+  </div>
+</div>
+
+<!-- 成績 -->
+<div id="s-stats" class="sec">
+  <div class="card">
+    <div class="ctitle">試合成績入力</div>
+    <label>選手</label><select id="ssel"><option value="">選択してください...</option></select>
+    <label>試合日</label><input id="sdate" type="date">
+    <div class="g2">
+      <div><label>打数 (AB)</label><input id="sab" type="number" value="4" min="0"></div>
+      <div><label>四球 (BB)</label><input id="sbb" type="number" value="0" min="0"></div>
+    </div>
+    <p class="smini" style="margin:8px 0 4px;font-weight:600">安打内訳</p>
+    <div class="g2">
+      <div><label>単打 (1B)</label><input id="s1b" type="number" value="0" min="0"></div>
+      <div><label>二塁打 (2B)</label><input id="s2b" type="number" value="0" min="0"></div>
+    </div>
+    <div class="g2">
+      <div><label>三塁打 (3B)</label><input id="s3b" type="number" value="0" min="0"></div>
+      <div><label>本塁打 (HR)</label><input id="shr" type="number" value="0" min="0"></div>
+    </div>
+    <div class="g2">
+      <div><label>死球 (HBP)</label><input id="shbp" type="number" value="0" min="0"></div>
+      <div><label>犠飛 (SF)</label><input id="ssf" type="number" value="0" min="0"></div>
+    </div>
+    <div id="opsprev" style="display:none;margin:10px 0">
+      <div class="g2" style="gap:8px">
+        <div class="mcard"><div class="mval" id="pobp">-</div><div class="mlbl">OBP 出塁率</div></div>
+        <div class="mcard"><div class="mval" id="pslg">-</div><div class="mlbl">SLG 長打率</div></div>
+        <div class="mcard"><div class="mval" id="pops">-</div><div class="mlbl">OPS</div></div>
+        <div class="mcard"><div class="mval" id="pavg">-</div><div class="mlbl">AVG 打率</div></div>
+      </div>
+    </div>
+    <button class="btn btn-g" onclick="saveStats()">✓ 成績を保存</button>
+    <div id="smsg"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">累計OPSランキング</div>
+    <div id="ranking"><div class="empty">成績を入力してください</div></div>
+  </div>
+</div>
+
+<!-- 打順 -->
+<div id="s-lineup" class="sec">
+  <div class="card">
+    <div class="ctitle">AI打順提案（Claude）</div>
+    <p style="font-size:13px;color:#666;margin-bottom:10px">登録成績をもとにAIが最適打順を提案します。設定タブでAPIキーを保存しておくと便利です。</p>
+    <label>Anthropic APIキー</label>
+    <input type="password" id="lkey" placeholder="sk-ant-...">
+    <button class="btn btn-a" onclick="doLineup()">⚡ 打順を考えてもらう</button>
+    <div id="lload" style="display:none;text-align:center;padding:16px;color:#888;font-size:13px">🤖 AIが分析中...</div>
+    <div id="lres"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">OPS順 自動スタメン</div>
+    <div id="mlineup"><div class="empty">成績入力後に表示されます</div></div>
+  </div>
+</div>
+
+<!-- 動画 -->
+<div id="s-videos" class="sec">
+  <div class="card">
+    <div class="ctitle">YouTube動画を登録</div>
+    <p class="smini" style="margin-bottom:8px">限定公開URLも登録できます。チームメンバーとURLを共有してください。</p>
+    <label>YouTube URL</label><input id="yurl" placeholder="https://youtube.com/watch?v=xxxxx">
+    <label>タイトル</label><input id="ytitle" placeholder="6/15 vs ○○戦 ハイライト">
+    <label>試合日</label><input id="ydate" type="date">
+    <button class="btn btn-b" onclick="addVideo()">＋ 動画を追加</button>
+    <div id="ymsg"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">動画一覧</div>
+    <div id="vlist"><div class="empty">動画を追加してください</div></div>
+  </div>
+</div>
+
+<!-- 設定 -->
+<div id="s-cfg" class="sec">
+  <div class="card">
+    <div class="ctitle">🔗 Supabase設定（チーム共有）</div>
+    <p class="smini" style="margin-bottom:8px">設定するとチーム全員でデータを共有できます（未設定はブラウザローカル保存）</p>
+    <label>Supabase URL</label><input id="curl" placeholder="https://xxxx.supabase.co">
+    <label>Supabase Anon Key</label><input type="password" id="ckey" placeholder="eyJ...">
+    <label>Anthropic APIキー（AI打順提案用）</label><input type="password" id="cakey" placeholder="sk-ant-...">
+    <button class="btn btn-b" onclick="saveCfg()">設定を保存</button>
+    <div id="cfgmsg"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">チーム情報</div>
+    <label>チーム名</label><input id="cteam" placeholder="○○ベースボールクラブ">
+    <button class="btn btn-o" onclick="saveTeam()">保存</button>
+  </div>
+  <div class="card">
+    <div class="ctitle">データ管理</div>
+    <button class="btn btn-o" onclick="exportData()">📥 JSONでエクスポート</button>
+    <button class="btn btn-o" style="background:#fff0f0;color:#c00;border-color:#fcc" onclick="clearAll()">🗑 全データを削除</button>
+  </div>
+  <div class="card">
+    <div class="ctitle">📖 使い方ガイド</div>
+    <ol style="font-size:13px;line-height:1.9;color:#444;padding-left:18px">
+      <li>「選手」タブで選手を登録する</li>
+      <li>「成績」タブで試合ごとの成績を入力（OPS自動計算）</li>
+      <li>「打順」タブでAIに打順提案を依頼</li>
+      <li>「動画」タブにYouTube限定公開URLを登録して共有</li>
+      <li>Supabaseを設定するとチーム全員でデータ共有可能</li>
+      <li>GitHub Pagesで公開してURLをチームに共有</li>
+    </ol>
+  </div>
+</div>
+</div>
+
+<script>
+let P=JSON.parse(localStorage.getItem('bb_p')||'[]');
+let S=JSON.parse(localStorage.getItem('bb_s')||'[]');
+let V=JSON.parse(localStorage.getItem('bb_v')||'[]');
+let C=JSON.parse(localStorage.getItem('bb_c')||'{}');
+
+function sv(){
+  localStorage.setItem('bb_p',JSON.stringify(P));
+  localStorage.setItem('bb_s',JSON.stringify(S));
+  localStorage.setItem('bb_v',JSON.stringify(V));
+  localStorage.setItem('bb_c',JSON.stringify(C));
+}
+
+function calcOPS(s){
+  const AB=+s.ab, H=(+s.s1b)+(+s.s2b)+(+s.s3b)+(+s.hr);
+  const BB=+s.bb, HBP=+s.hbp, SF=+s.sf;
+  const TB=(+s.s1b)+(+s.s2b)*2+(+s.s3b)*3+(+s.hr)*4;
+  const d=AB+BB+HBP+SF;
+  const obp=d>0?(H+BB+HBP)/d:0;
+  const slg=AB>0?TB/AB:0;
+  return{OBP:obp.toFixed(3),SLG:slg.toFixed(3),OPS:(obp+slg).toFixed(3),AVG:(AB>0?H/AB:0).toFixed(3)};
+}
+
+function getTotals(){
+  return P.map(p=>{
+    const ps=S.filter(s=>s.pid===p.id);
+    const t=ps.reduce((a,s)=>({
+      ab:a.ab+(+s.ab),s1b:a.s1b+(+s.s1b),s2b:a.s2b+(+s.s2b),
+      s3b:a.s3b+(+s.s3b),hr:a.hr+(+s.hr),bb:a.bb+(+s.bb),
+      hbp:a.hbp+(+s.hbp),sf:a.sf+(+s.sf)
+    }),{ab:0,s1b:0,s2b:0,s3b:0,hr:0,bb:0,hbp:0,sf:0});
+    const o=ps.length>0?calcOPS(t):{OBP:'---',SLG:'---',OPS:'---',AVG:'---'};
+    return{...p,...t,...o,games:ps.length};
+  });
+}
+
+function ocls(v){
+  const n=parseFloat(v);
+  if(isNaN(n))return'cy';
+  if(n>=0.9)return'cg';
+  if(n>=0.75)return'cb';
+  if(n>=0.6)return'cy';
+  return'cr';
+}
+
+function go(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('s-'+id).classList.add('on');
+  if(id==='stats')initStats();
+  if(id==='lineup')initLineup();
+  if(id==='videos')renderVideos();
+  if(id==='cfg')loadCfg();
+}
+
+function addPlayer(){
+  const name=document.getElementById('pname').value.trim();
+  if(!name){showMsg('pmsg','名前を入力してください',false);return;}
+  P.push({id:Date.now()+'',name,pos:document.getElementById('ppos').value,num:document.getElementById('pnum').value||'?'});
+  sv();renderPlayers();
+  document.getElementById('pname').value='';document.getElementById('pnum').value='';
+  showMsg('pmsg',name+' を登録しました',true);
+}
+
+function renderPlayers(){
+  const el=document.getElementById('plist');
+  if(!P.length){el.innerHTML='<div class="empty">選手を登録してください</div>';return;}
+  const t=getTotals();
+  el.innerHTML=t.map(p=>`
+    <div class="prow">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="numball">${p.num}</span>
+          <span class="pname">${p.name}</span>
+        </div>
+        <div class="ppos" style="margin-left:30px">${p.pos} · ${p.games}試合</div>
+      </div>
+      <span class="chip ${ocls(p.OPS)}">OPS ${p.OPS}</span>
+    </div>`).join('');
+  refreshPlayerSelect();
+}
+
+function refreshPlayerSelect(){
+  const sel=document.getElementById('ssel');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">選択してください...</option>'+
+    P.map(p=>`<option value="${p.id}"${p.id===cur?' selected':''}>${p.name}（${p.pos}）</option>`).join('');
+}
+
+function initStats(){
+  refreshPlayerSelect();
+  renderRanking();
+  document.getElementById('sdate').value=new Date().toISOString().split('T')[0];
+}
+
+function prevOPS(){
+  const ab=+document.getElementById('sab').value;
+  if(!ab){document.getElementById('opsprev').style.display='none';return;}
+  const r=calcOPS({ab,s1b:document.getElementById('s1b').value,s2b:document.getElementById('s2b').value,
+    s3b:document.getElementById('s3b').value,hr:document.getElementById('shr').value,
+    bb:document.getElementById('sbb').value,hbp:document.getElementById('shbp').value,sf:document.getElementById('ssf').value});
+  document.getElementById('pobp').textContent=r.OBP;
+  document.getElementById('pslg').textContent=r.SLG;
+  document.getElementById('pops').textContent=r.OPS;
+  document.getElementById('pavg').textContent=r.AVG;
+  document.getElementById('opsprev').style.display='block';
+}
+
+['sab','s1b','s2b','s3b','shr','sbb','shbp','ssf'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',prevOPS);
+});
+
+function saveStats(){
+  const pid=document.getElementById('ssel').value;
+  const date=document.getElementById('sdate').value;
+  if(!pid||!date){showMsg('smsg','選手と日付を選択してください',false);return;}
+  S.push({id:Date.now()+'',pid,date,
+    ab:document.getElementById('sab').value,
+    s1b:document.getElementById('s1b').value,
+    s2b:document.getElementById('s2b').value,
+    s3b:document.getElementById('s3b').value,
+    hr:document.getElementById('shr').value,
+    bb:document.getElementById('sbb').value,
+    hbp:document.getElementById('shbp').value,
+    sf:document.getElementById('ssf').value});
+  sv();renderRanking();
+  const p=P.find(x=>x.id===pid);
+  showMsg('smsg',(p?p.name:'選手')+'の成績を保存しました',true);
+}
+
+function renderRanking(){
+  const el=document.getElementById('ranking');
+  const t=getTotals().filter(p=>p.games>0).sort((a,b)=>parseFloat(b.OPS||0)-parseFloat(a.OPS||0));
+  if(!t.length){el.innerHTML='<div class="empty">成績を入力してください</div>';return;}
+  el.innerHTML=t.map((p,i)=>`
+    <div class="prow">
+      <div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:13px;color:#aaa;width:16px;text-align:center">${i+1}</span>
+          <span class="pname">${p.name}</span>
+        </div>
+        <div style="font-size:11px;color:#888;margin-left:22px">AVG ${p.AVG} · OBP ${p.OBP} · SLG ${p.SLG} · ${p.games}試合</div>
+      </div>
+      <span class="chip ${ocls(p.OPS)}">OPS ${p.OPS}</span>
+    </div>`).join('');
+}
+
+function initLineup(){
+  const t=getTotals().filter(p=>p.games>0).sort((a,b)=>parseFloat(b.OPS||0)-parseFloat(a.OPS||0)).slice(0,9);
+  const el=document.getElementById('mlineup');
+  if(!t.length){el.innerHTML='<div class="empty">成績入力後に表示されます</div>';return;}
+  el.innerHTML=t.map((p,i)=>`
+    <div class="li">
+      <div class="lnum">${i+1}</div>
+      <div>
+        <div style="font-size:14px;font-weight:600">${p.name}</div>
+        <div style="font-size:11px;color:#888">${p.pos} · OPS ${p.OPS}</div>
+      </div>
+    </div>`).join('');
+  if(C.anthropicKey)document.getElementById('lkey').value=C.anthropicKey;
+}
+
+async function doLineup(){
+  const key=document.getElementById('lkey').value.trim()||C.anthropicKey;
+  if(!key){document.getElementById('lres').innerHTML='<div class="msg er">APIキーを入力してください（設定タブでも保存できます）</div>';return;}
+  const t=getTotals().filter(p=>p.games>0);
+  if(!t.length){document.getElementById('lres').innerHTML='<div class="msg er">成績データがありません。先に成績を入力してください。</div>';return;}
+  document.getElementById('lload').style.display='block';
+  document.getElementById('lres').innerHTML='';
+  const pd=t.map(p=>`${p.name}（${p.pos}）OPS:${p.OPS} OBP:${p.OBP} SLG:${p.SLG} AVG:${p.AVG} ${p.games}試合`).join('\n');
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:1000,
+        messages:[{role:'user',content:`あなたは草野球の監督です。以下の選手成績データをもとに、最適なスタメン打順（最大9名）を提案してください。\n\n【選手データ】\n${pd}\n\n野球の打順理論（1番:出塁率重視、2番:つなぎ、3・4番:長打力、5・6番:クリーンアップ補佐、7・8番:勝負強さ、9番:出塁率or投手前）に基づいて、1番〜9番の打順・選手名・選定理由を日本語で分かりやすく提案してください。`}]
+      })
+    });
+    const d=await r.json();
+    document.getElementById('lload').style.display='none';
+    if(d.content&&d.content[0]){
+      document.getElementById('lres').innerHTML=`<div class="ai-box">${d.content[0].text}</div>`;
+    }else{
+      document.getElementById('lres').innerHTML=`<div class="msg er">APIエラー: ${d.error?.message||'不明なエラー'}</div>`;
+    }
+  }catch(e){
+    document.getElementById('lload').style.display='none';
+    document.getElementById('lres').innerHTML=`<div class="msg er">通信エラー: ${e.message}</div>`;
+  }
+}
+
+function addVideo(){
+  const url=document.getElementById('yurl').value.trim();
+  const title=document.getElementById('ytitle').value.trim();
+  const date=document.getElementById('ydate').value;
+  if(!url||!title){showMsg('ymsg','URLとタイトルを入力してください',false);return;}
+  const m=url.match(/[?&]v=([^&]+)/)||url.match(/youtu\.be\/([^?]+)/);
+  V.push({id:Date.now()+'',url,title,date,vid:m?m[1]:null});
+  sv();renderVideos();
+  document.getElementById('yurl').value='';document.getElementById('ytitle').value='';
+  showMsg('ymsg','動画を追加しました',true);
+}
+
+function renderVideos(){
+  const el=document.getElementById('vlist');
+  if(!V.length){el.innerHTML='<div class="empty">動画を追加してください</div>';return;}
+  el.innerHTML=[...V].reverse().map(v=>`
+    <div class="ytcard">
+      <div class="ytthumb">
+        ${v.vid?`<img src="https://img.youtube.com/vi/${v.vid}/mqdefault.jpg" onerror="this.parentElement.innerHTML='▶'">`:'▶'}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="yttitle">${v.title}</div>
+        <div class="ytdate">${v.date||''}</div>
+        <a class="ytlink" href="${v.url}" target="_blank">▶ YouTubeで見る</a>
+      </div>
+    </div>`).join('');
+}
+
+function saveCfg(){
+  C.supabaseUrl=document.getElementById('curl').value.trim();
+  C.supabaseKey=document.getElementById('ckey').value.trim();
+  C.anthropicKey=document.getElementById('cakey').value.trim();
+  sv();showMsg('cfgmsg','設定を保存しました',true);
+}
+
+function saveTeam(){
+  C.team=document.getElementById('cteam').value.trim();
+  sv();
+  if(C.team)document.getElementById('teamlbl').textContent=C.team;
+}
+
+function loadCfg(){
+  if(C.supabaseUrl)document.getElementById('curl').value=C.supabaseUrl;
+  if(C.supabaseKey)document.getElementById('ckey').value=C.supabaseKey;
+  if(C.anthropicKey)document.getElementById('cakey').value=C.anthropicKey;
+  if(C.team)document.getElementById('cteam').value=C.team;
+}
+
+function exportData(){
+  const b=new Blob([JSON.stringify({players:P,stats:S,videos:V,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='baseball_data.json';a.click();
+}
+
+function clearAll(){
+  if(confirm('全データを削除しますか？この操作は元に戻せません。')){
+    P=[];S=[];V=[];sv();renderPlayers();renderVideos();
+    showMsg('cfgmsg','削除しました',true);
+  }
+}
+
+function showMsg(id,text,ok){
+  const el=document.getElementById(id);
+  el.innerHTML=`<div class="msg ${ok?'ok':'er'}">${text}</div>`;
+  setTimeout(()=>el.innerHTML='',3000);
+}
+
+// 初期化
+document.getElementById('ydate').value=new Date().toISOString().split('T')[0];
+if(C.team)document.getElementById('teamlbl').textContent=C.team;
+renderPlayers();
+</script>
+</body>
+</html>
