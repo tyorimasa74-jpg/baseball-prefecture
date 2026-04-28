@@ -223,52 +223,41 @@ function sv(){
 
 function sbClient(){
   if(!C.supabaseUrl||!C.supabaseKey)return null;
-  return{
-    url:C.supabaseUrl,
-    key:C.supabaseKey,
-    async from(table){
-      const base=this;
-      return{
-        async select(){
-          const r=await fetch(base.url+'/rest/v1/'+table+'?select=*',{headers:{'apikey':base.key,'Authorization':'Bearer '+base.key}});
-          return r.json();
-        },
-        async insert(data){
-          await fetch(base.url+'/rest/v1/'+table,{method:'POST',headers:{'apikey':base.key,'Authorization':'Bearer '+base.key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(data)});
-        }
-      };
-    }
-  };
+  return{url:C.supabaseUrl,key:C.supabaseKey};
+}
+
+async function sbFetch(table){
+  const sb=sbClient();if(!sb)return[];
+  const r=await fetch(sb.url+'/rest/v1/'+table+'?select=*&order=created_at.asc',{headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key}});
+  return r.json();
+}
+
+async function sbInsert(table,data){
+  const sb=sbClient();if(!sb)return;
+  await fetch(sb.url+'/rest/v1/'+table,{method:'POST',headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(data)});
 }
 
 async function syncFromSupabase(){
-  const sb=sbClient();
-  if(!sb)return;
+  if(!sbClient())return;
   try{
-    const pc=await (await sb.from('players')).select();
-    const sc=await (await sb.from('stats')).select();
-    const vc=await (await sb.from('videos')).select();
-    if(Array.isArray(pc)&&pc.length>0){P=pc;localStorage.setItem('bb_p',JSON.stringify(P));}
-    if(Array.isArray(sc)&&sc.length>0){S=sc;localStorage.setItem('bb_s',JSON.stringify(S));}
-    if(Array.isArray(vc)&&vc.length>0){V=vc;localStorage.setItem('bb_v',JSON.stringify(V));}
-    renderPlayers();renderRanking();
+    const [pc,sc,vc]=await Promise.all([sbFetch('players'),sbFetch('stats'),sbFetch('videos')]);
+    if(Array.isArray(pc)&&!pc.error){P=pc.map(p=>({id:p.id,name:p.name,pos:p.pos,num:p.num}));localStorage.setItem('bb_p',JSON.stringify(P));}
+    if(Array.isArray(sc)&&!sc.error){S=sc.map(s=>({id:s.id,pid:s.pid,date:s.game_date,ab:s.ab,s1b:s.s1b,s2b:s.s2b,s3b:s.s3b,hr:s.hr,bb:s.bb,hbp:s.hbp,sf:s.sf}));localStorage.setItem('bb_s',JSON.stringify(S));}
+    if(Array.isArray(vc)&&!vc.error){V=vc.map(v=>({id:v.id,url:v.url,title:v.title,date:v.game_date,vid:v.vid}));localStorage.setItem('bb_v',JSON.stringify(V));}
   }catch(e){console.log('sync error',e);}
 }
 
-async function pushPlayer(p){
-  const sb=sbClient();if(!sb)return;
-  try{await (await sb.from('players')).insert(p);}catch(e){}
-}
-
+async function pushPlayer(p){try{await sbInsert('players',p);}catch(e){}}
 async function pushStat(s){
-  const sb=sbClient();if(!sb)return;
-  try{await (await sb.from('stats')).insert({...s,game_date:s.date});}catch(e){}
+  try{
+    await sbInsert('stats',{
+      id:s.id, pid:s.pid, game_date:s.date,
+      ab:+s.ab, s1b:+s.s1b, s2b:+s.s2b, s3b:+s.s3b, hr:+s.hr,
+      bb:+s.bb, hbp:+s.hbp, sf:+s.sf
+    });
+  }catch(e){console.log('pushStat error',e);}
 }
-
-async function pushVideo(v){
-  const sb=sbClient();if(!sb)return;
-  try{await (await sb.from('videos')).insert({...v,game_date:v.date});}catch(e){}
-}
+async function pushVideo(v){try{await sbInsert('videos',{...v,game_date:v.date});}catch(e){}}
 
 function calcOPS(s){
   const AB=+s.ab, H=(+s.s1b)+(+s.s2b)+(+s.s3b)+(+s.hr);
@@ -307,9 +296,10 @@ function go(id,el){
   el.classList.add('on');
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
   document.getElementById('s-'+id).classList.add('on');
+  if(id==='players'){syncFromSupabase().then(()=>renderPlayers());}
   if(id==='stats')initStats();
-  if(id==='lineup')initLineup();
-  if(id==='videos')renderVideos();
+  if(id==='lineup'){syncFromSupabase().then(()=>initLineup());}
+  if(id==='videos'){syncFromSupabase().then(()=>renderVideos());}
   if(id==='cfg')loadCfg();
 }
 
@@ -348,8 +338,10 @@ function refreshPlayerSelect(){
 }
 
 function initStats(){
-  refreshPlayerSelect();
-  renderRanking();
+  syncFromSupabase().then(()=>{
+    refreshPlayerSelect();
+    renderRanking();
+  });
   document.getElementById('sdate').value=new Date().toISOString().split('T')[0];
 }
 
@@ -519,8 +511,11 @@ function showMsg(id,text,ok){
 // 初期化
 document.getElementById('ydate').value=new Date().toISOString().split('T')[0];
 if(C.team)document.getElementById('teamlbl').textContent=C.team;
-syncFromSupabase();
-renderPlayers();
+// 起動時にSupabaseから読み込んでから描画
+(async()=>{
+  await syncFromSupabase();
+  renderPlayers();
+})();
 </script>
 </body>
 </html>
