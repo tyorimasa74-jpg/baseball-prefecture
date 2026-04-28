@@ -209,13 +209,65 @@ input:focus,select:focus{outline:none;border-color:#0f2944}
 let P=JSON.parse(localStorage.getItem('bb_p')||'[]');
 let S=JSON.parse(localStorage.getItem('bb_s')||'[]');
 let V=JSON.parse(localStorage.getItem('bb_v')||'[]');
-let C=JSON.parse(localStorage.getItem('bb_c')||'{}');
+let C=JSON.parse(localStorage.getItem('bb_c')||JSON.stringify({
+  supabaseUrl:'https://uqxqgacftmssyujdbvoh.supabase.co',
+  supabaseKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxeHFnYWNmdG1zc3l1amRidm9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMTg5NjQsImV4cCI6MjA5Mjg5NDk2NH0._ik5YEXCViK0RMu5I9Jiml5blw3YMMlsbDn18v3vJfU'
+}));
 
 function sv(){
   localStorage.setItem('bb_p',JSON.stringify(P));
   localStorage.setItem('bb_s',JSON.stringify(S));
   localStorage.setItem('bb_v',JSON.stringify(V));
   localStorage.setItem('bb_c',JSON.stringify(C));
+}
+
+function sbClient(){
+  if(!C.supabaseUrl||!C.supabaseKey)return null;
+  return{
+    url:C.supabaseUrl,
+    key:C.supabaseKey,
+    async from(table){
+      const base=this;
+      return{
+        async select(){
+          const r=await fetch(base.url+'/rest/v1/'+table+'?select=*',{headers:{'apikey':base.key,'Authorization':'Bearer '+base.key}});
+          return r.json();
+        },
+        async insert(data){
+          await fetch(base.url+'/rest/v1/'+table,{method:'POST',headers:{'apikey':base.key,'Authorization':'Bearer '+base.key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(data)});
+        }
+      };
+    }
+  };
+}
+
+async function syncFromSupabase(){
+  const sb=sbClient();
+  if(!sb)return;
+  try{
+    const pc=await (await sb.from('players')).select();
+    const sc=await (await sb.from('stats')).select();
+    const vc=await (await sb.from('videos')).select();
+    if(Array.isArray(pc)&&pc.length>0){P=pc;localStorage.setItem('bb_p',JSON.stringify(P));}
+    if(Array.isArray(sc)&&sc.length>0){S=sc;localStorage.setItem('bb_s',JSON.stringify(S));}
+    if(Array.isArray(vc)&&vc.length>0){V=vc;localStorage.setItem('bb_v',JSON.stringify(V));}
+    renderPlayers();renderRanking();
+  }catch(e){console.log('sync error',e);}
+}
+
+async function pushPlayer(p){
+  const sb=sbClient();if(!sb)return;
+  try{await (await sb.from('players')).insert(p);}catch(e){}
+}
+
+async function pushStat(s){
+  const sb=sbClient();if(!sb)return;
+  try{await (await sb.from('stats')).insert({...s,game_date:s.date});}catch(e){}
+}
+
+async function pushVideo(v){
+  const sb=sbClient();if(!sb)return;
+  try{await (await sb.from('videos')).insert({...v,game_date:v.date});}catch(e){}
 }
 
 function calcOPS(s){
@@ -265,7 +317,7 @@ function addPlayer(){
   const name=document.getElementById('pname').value.trim();
   if(!name){showMsg('pmsg','名前を入力してください',false);return;}
   P.push({id:Date.now()+'',name,pos:document.getElementById('ppos').value,num:document.getElementById('pnum').value||'?'});
-  sv();renderPlayers();
+  sv();pushPlayer(P[P.length-1]);renderPlayers();
   document.getElementById('pname').value='';document.getElementById('pnum').value='';
   showMsg('pmsg',name+' を登録しました',true);
 }
@@ -331,7 +383,7 @@ function saveStats(){
     bb:document.getElementById('sbb').value,
     hbp:document.getElementById('shbp').value,
     sf:document.getElementById('ssf').value});
-  sv();renderRanking();
+  sv();pushStat(S[S.length-1]);renderRanking();
   const p=P.find(x=>x.id===pid);
   showMsg('smsg',(p?p.name:'選手')+'の成績を保存しました',true);
 }
@@ -405,7 +457,7 @@ function addVideo(){
   if(!url||!title){showMsg('ymsg','URLとタイトルを入力してください',false);return;}
   const m=url.match(/[?&]v=([^&]+)/)||url.match(/youtu\.be\/([^?]+)/);
   V.push({id:Date.now()+'',url,title,date,vid:m?m[1]:null});
-  sv();renderVideos();
+  sv();pushVideo(V[V.length-1]);renderVideos();
   document.getElementById('yurl').value='';document.getElementById('ytitle').value='';
   showMsg('ymsg','動画を追加しました',true);
 }
@@ -467,6 +519,7 @@ function showMsg(id,text,ok){
 // 初期化
 document.getElementById('ydate').value=new Date().toISOString().split('T')[0];
 if(C.team)document.getElementById('teamlbl').textContent=C.team;
+syncFromSupabase();
 renderPlayers();
 </script>
 </body>
