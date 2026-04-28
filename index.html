@@ -325,9 +325,30 @@ function renderPlayers(){
         </div>
         <div class="ppos" style="margin-left:30px">${p.pos} · ${p.games}試合</div>
       </div>
-      <span class="chip ${ocls(p.OPS)}">OPS ${p.OPS}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="chip ${ocls(p.OPS)}">OPS ${p.OPS}</span>
+        <button onclick="deletePlayer('${p.id}')" style="background:#f8d7da;border:none;border-radius:6px;padding:3px 8px;font-size:12px;color:#721c24;cursor:pointer;">削除</button>
+      </div>
     </div>`).join('');
   refreshPlayerSelect();
+}
+
+async function deletePlayer(id){
+  if(!confirm('この選手を削除しますか？関連する成績も削除されます。'))return;
+  // ローカルから削除
+  P=P.filter(p=>p.id!==id);
+  S=S.filter(s=>s.pid!==id);
+  sv();
+  // Supabaseから削除
+  const sb=sbClient();
+  if(sb){
+    try{
+      await fetch(sb.url+'/rest/v1/stats?pid=eq.'+id,{method:'DELETE',headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key}});
+      await fetch(sb.url+'/rest/v1/players?id=eq.'+id,{method:'DELETE',headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key}});
+    }catch(e){console.log('delete error',e);}
+  }
+  renderPlayers();
+  showMsg('pmsg','削除しました',true);
 }
 
 function refreshPlayerSelect(){
