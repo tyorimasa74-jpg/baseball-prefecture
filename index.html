@@ -245,13 +245,15 @@ async function syncFromSupabase(){
   const sb=sbClient();
   if(!sb)return;
   try{
-    const pc=await (await sb.from('players')).select();
-    const sc=await (await sb.from('stats')).select();
-    const vc=await (await sb.from('videos')).select();
-    if(Array.isArray(pc)&&pc.length>0){P=pc;localStorage.setItem('bb_p',JSON.stringify(P));}
-    if(Array.isArray(sc)&&sc.length>0){S=sc;localStorage.setItem('bb_s',JSON.stringify(S));}
-    if(Array.isArray(vc)&&vc.length>0){V=vc;localStorage.setItem('bb_v',JSON.stringify(V));}
-    renderPlayers();renderRanking();
+    const [pc,sc,vc]=await Promise.all([
+      fetch(sb.url+'/rest/v1/players?select=*&order=created_at.asc',{headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key}}).then(r=>r.json()),
+      fetch(sb.url+'/rest/v1/stats?select=*&order=created_at.asc',{headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key}}).then(r=>r.json()),
+      fetch(sb.url+'/rest/v1/videos?select=*&order=created_at.asc',{headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key}}).then(r=>r.json()),
+    ]);
+    if(Array.isArray(pc)){P=pc.map(p=>({id:p.id,name:p.name,pos:p.pos,num:p.num}));localStorage.setItem('bb_p',JSON.stringify(P));}
+    if(Array.isArray(sc)){S=sc.map(s=>({id:s.id,pid:s.pid,date:s.game_date,ab:s.ab,s1b:s.s1b,s2b:s.s2b,s3b:s.s3b,hr:s.hr,bb:s.bb,hbp:s.hbp,sf:s.sf}));localStorage.setItem('bb_s',JSON.stringify(S));}
+    if(Array.isArray(vc)){V=vc.map(v=>({id:v.id,url:v.url,title:v.title,date:v.game_date,vid:v.vid}));localStorage.setItem('bb_v',JSON.stringify(V));}
+    renderPlayers();renderRanking();renderVideos();
   }catch(e){console.log('sync error',e);}
 }
 
