@@ -161,13 +161,17 @@ input:focus,select:focus{outline:none;border-color:#0f2944}
 <!-- 打順 -->
 <div id="s-lineup" class="sec">
   <div class="card">
-    <div class="ctitle">AI打順提案（Claude）</div>
-    <p style="font-size:13px;color:#666;margin-bottom:10px">登録成績をもとにAIが最適打順を提案します。設定タブでAPIキーを保存しておくと便利です。</p>
-    <label>Anthropic APIキー</label>
-    <input type="password" id="lkey" placeholder="sk-ant-...">
-    <button class="btn btn-a" onclick="doLineup()">⚡ 打順を考えてもらう</button>
-    <div id="lload" style="display:none;text-align:center;padding:16px;color:#888;font-size:13px">🤖 AIが分析中...</div>
+    <div class="ctitle">AI打順提案（無料）</div>
+    <p style="font-size:13px;color:#666;margin-bottom:10px">ボタンを押すと成績データがコピーされます。<br>ClaudeのチャットにペーストするだけでAIが打順を提案します！</p>
+    <button class="btn btn-a" onclick="copyForClaude()">📋 成績データをコピーする</button>
     <div id="lres"></div>
+    <div style="margin-top:10px;background:#f0f7ff;border-radius:10px;padding:12px;font-size:13px;line-height:1.7;color:#333">
+      <b>使い方</b><br>
+      1. 上のボタンで成績データをコピー<br>
+      2. <a href="https://claude.ai" target="_blank" style="color:#185FA5">claude.ai</a> を開く<br>
+      3. チャットに貼り付けて送信<br>
+      4. AIが最適打順を提案してくれます！
+    </div>
   </div>
   <div class="card">
     <div class="ctitle">OPS順 自動スタメン</div>
@@ -450,18 +454,41 @@ function renderRanking(){
 }
 
 function initLineup(){
-  const t=getTotals().filter(p=>p.games>0).sort((a,b)=>parseFloat(b.OPS||0)-parseFloat(a.OPS||0)).slice(0,9);
+  const t=getTotals().filter(p=>p.games>0);
   const el=document.getElementById('mlineup');
   if(!t.length){el.innerHTML='<div class="empty">成績入力後に表示されます</div>';return;}
-  el.innerHTML=t.map((p,i)=>`
-    <div class="li">
-      <div class="lnum">${i+1}</div>
-      <div>
-        <div style="font-size:14px;font-weight:600">${p.name}</div>
-        <div style="font-size:11px;color:#888">${p.pos} · OPS ${p.OPS}</div>
-      </div>
-    </div>`).join('');
-  if(C.anthropicKey)document.getElementById('lkey').value=C.anthropicKey;
+
+  const byOBP=[...t].sort((a,b)=>parseFloat(b.OBP||0)-parseFloat(a.OBP||0));
+  const bySLG=[...t].sort((a,b)=>parseFloat(b.SLG||0)-parseFloat(a.SLG||0));
+  const byOPS=[...t].sort((a,b)=>parseFloat(b.OPS||0)-parseFloat(a.OPS||0));
+  const nine=byOPS.slice(0,9);
+  const used=new Set();
+
+  function pick(arr){
+    for(let i=0;i<arr.length;i++){
+      if(!used.has(arr[i].id)&&nine.find(x=>x.id===arr[i].id)){
+        used.add(arr[i].id);return arr[i];
+      }
+    }
+    return null;
+  }
+
+  const lineup=[];
+  lineup[0]=pick(byOBP);
+  lineup[2]=pick(byOPS);
+  lineup[3]=pick(bySLG);
+  lineup[1]=pick(byOPS);
+  lineup[4]=pick(byOPS);
+  lineup[5]=pick(byOPS);
+  lineup[6]=pick(byOPS);
+  lineup[7]=pick(byOPS);
+  lineup[8]=pick(byOBP)||pick(byOPS);
+
+  const reasons=['出塁率重視・チャンスメーカー','つなぎ役','長打力と出塁率のバランス','最強打者・クリーンアップ','クリーンアップ補佐','勝負強さに期待','下位打線の起点','チャンスを作る','投手前・出塁重視'];
+
+  el.innerHTML=lineup.filter(Boolean).map(function(p,i){
+    return '<div class="li"><div class="lnum">'+(i+1)+'</div><div style="flex:1"><div style="font-size:14px;font-weight:600">'+p.name+'</div><div style="font-size:11px;color:#888">'+p.pos+' OPS '+p.OPS+' OBP '+p.OBP+' SLG '+p.SLG+'</div><div style="font-size:11px;color:#1a6b3c">'+reasons[i]+'</div></div></div>';
+  }).join('');
 }
 
 async function doLineup(){
