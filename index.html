@@ -97,6 +97,28 @@ input:focus,select:focus{outline:none;border-color:#0f2944}
 </div>
 
 <!-- 成績 -->
+<!-- 成績編集モーダル -->
+<div id="edit-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:100;overflow-y:auto">
+  <div style="background:#fff;border-radius:12px;margin:20px 12px;padding:16px">
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px">成績を編集</div>
+    <input type="hidden" id="edit-id">
+    <label style="font-size:12px;color:#666">試合日</label>
+    <input id="edit-date" type="date" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label style="font-size:12px;color:#666">打数 AB</label><input id="edit-ab" type="number" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:#666">四球 BB</label><input id="edit-bb" type="number" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:#666">単打 1B</label><input id="edit-1b" type="number" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:#666">二塁打 2B</label><input id="edit-2b" type="number" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:#666">三塁打 3B</label><input id="edit-3b" type="number" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:#666">本塁打 HR</label><input id="edit-hr" type="number" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:#666">死球 HBP</label><input id="edit-hbp" type="number" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:#666">犠飛 SF</label><input id="edit-sf" type="number" min="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+    </div>
+    <button onclick="saveStat()" style="width:100%;padding:11px;background:#1a6b3c;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;margin-top:12px">保存</button>
+    <button onclick="closeModal()" style="width:100%;padding:11px;background:#fff;border:1px solid #ddd;color:#333;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px">キャンセル</button>
+  </div>
+</div>
+
 <div id="s-stats" class="sec">
   <div class="card">
     <div class="ctitle">試合成績入力</div>
@@ -407,14 +429,23 @@ function renderRanking(){
   if(!t.length){el.innerHTML='<div class="empty">成績を入力してください</div>';return;}
   el.innerHTML=t.map((p,i)=>`
     <div class="prow">
-      <div>
+      <div style="flex:1">
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:13px;color:#aaa;width:16px;text-align:center">${i+1}</span>
           <span class="pname">${p.name}</span>
+          <span class="chip ${ocls(p.OPS)}" style="margin-left:4px">OPS ${p.OPS}</span>
         </div>
         <div style="font-size:11px;color:#888;margin-left:22px">AVG ${p.AVG} · OBP ${p.OBP} · SLG ${p.SLG} · ${p.games}試合</div>
+        <div style="margin-left:22px;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
+          ${S.filter(s=>s.pid===p.id).map(s=>`
+            <div style="display:flex;align-items:center;gap:4px;background:#f8f8f5;border-radius:6px;padding:3px 8px;font-size:11px">
+              <span>${s.date}</span>
+              <span>${+s.ab}打数 ${+s.s1b+ +s.s2b+ +s.s3b+ +s.hr}安打</span>
+              <button onclick="editStat('${s.id}')" style="background:#cce5ff;border:none;border-radius:4px;padding:1px 6px;font-size:11px;color:#004085;cursor:pointer">編集</button>
+              <button onclick="deleteStat('${s.id}')" style="background:#f8d7da;border:none;border-radius:4px;padding:1px 6px;font-size:11px;color:#721c24;cursor:pointer">削除</button>
+            </div>`).join('')}
+        </div>
       </div>
-      <span class="chip ${ocls(p.OPS)}">OPS ${p.OPS}</span>
     </div>`).join('');
 }
 
@@ -509,6 +540,72 @@ function loadCfg(){
   if(C.supabaseKey)document.getElementById('ckey').value=C.supabaseKey;
   if(C.anthropicKey)document.getElementById('cakey').value=C.anthropicKey;
   if(C.team)document.getElementById('cteam').value=C.team;
+}
+
+function editStat(id){
+  const s=S.find(x=>x.id===id);
+  if(!s)return;
+  document.getElementById('edit-id').value=s.id;
+  document.getElementById('edit-date').value=s.date;
+  document.getElementById('edit-ab').value=s.ab;
+  document.getElementById('edit-bb').value=s.bb;
+  document.getElementById('edit-1b').value=s.s1b;
+  document.getElementById('edit-2b').value=s.s2b;
+  document.getElementById('edit-3b').value=s.s3b;
+  document.getElementById('edit-hr').value=s.hr;
+  document.getElementById('edit-hbp').value=s.hbp;
+  document.getElementById('edit-sf').value=s.sf;
+  document.getElementById('edit-modal').style.display='block';
+}
+
+async function saveStat(){
+  const id=document.getElementById('edit-id').value;
+  const idx=S.findIndex(x=>x.id===id);
+  if(idx<0)return;
+  const updated={
+    ...S[idx],
+    date:document.getElementById('edit-date').value,
+    ab:document.getElementById('edit-ab').value,
+    bb:document.getElementById('edit-bb').value,
+    s1b:document.getElementById('edit-1b').value,
+    s2b:document.getElementById('edit-2b').value,
+    s3b:document.getElementById('edit-3b').value,
+    hr:document.getElementById('edit-hr').value,
+    hbp:document.getElementById('edit-hbp').value,
+    sf:document.getElementById('edit-sf').value,
+  };
+  S[idx]=updated;
+  sv();
+  // Supabaseを更新
+  const sb=sbClient();
+  if(sb){
+    try{
+      await fetch(sb.url+'/rest/v1/stats?id=eq.'+id,{
+        method:'PATCH',
+        headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({game_date:updated.date,ab:+updated.ab,s1b:+updated.s1b,s2b:+updated.s2b,s3b:+updated.s3b,hr:+updated.hr,bb:+updated.bb,hbp:+updated.hbp,sf:+updated.sf})
+      });
+    }catch(e){console.log('update error',e);}
+  }
+  closeModal();
+  renderRanking();
+}
+
+async function deleteStat(id){
+  if(!confirm('この成績を削除しますか？'))return;
+  S=S.filter(s=>s.id!==id);
+  sv();
+  const sb=sbClient();
+  if(sb){
+    try{
+      await fetch(sb.url+'/rest/v1/stats?id=eq.'+id,{method:'DELETE',headers:{'apikey':sb.key,'Authorization':'Bearer '+sb.key}});
+    }catch(e){}
+  }
+  renderRanking();
+}
+
+function closeModal(){
+  document.getElementById('edit-modal').style.display='none';
 }
 
 function exportData(){
