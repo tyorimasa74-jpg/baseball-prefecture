@@ -161,17 +161,10 @@ input:focus,select:focus{outline:none;border-color:#0f2944}
 <!-- 打順 -->
 <div id="s-lineup" class="sec">
   <div class="card">
-    <div class="ctitle">AI打順提案（無料）</div>
-    <p style="font-size:13px;color:#666;margin-bottom:10px">ボタンを押すと成績データがコピーされます。<br>ClaudeのチャットにペーストするだけでAIが打順を提案します！</p>
-    <button class="btn btn-a" onclick="copyForClaude()">📋 成績データをコピーする</button>
+    <div class="ctitle">⚡ 自動打順提案</div>
+    <p style="font-size:13px;color:#666;margin-bottom:10px">成績データをもとに打順理論で自動的に最適打順を決定します</p>
+    <button class="btn btn-a" onclick="initLineup()">🔄 打順を決める</button>
     <div id="lres"></div>
-    <div style="margin-top:10px;background:#f0f7ff;border-radius:10px;padding:12px;font-size:13px;line-height:1.7;color:#333">
-      <b>使い方</b><br>
-      1. 上のボタンで成績データをコピー<br>
-      2. <a href="https://claude.ai" target="_blank" style="color:#185FA5">claude.ai</a> を開く<br>
-      3. チャットに貼り付けて送信<br>
-      4. AIが最適打順を提案してくれます！
-    </div>
   </div>
   <div class="card">
     <div class="ctitle">OPS順 自動スタメン</div>
